@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rick_and_morty_flutter_freezed/bloc/character_bloc.dart';
+import 'package:rick_and_morty_flutter_freezed/data/models/character.dart';
+import 'package:rick_and_morty_flutter_freezed/ui/widgets/custom_list_tile.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({Key? key}) : super(key: key);
@@ -10,9 +12,16 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  late Character _currentCharacter;
+  List<Results> _currentResults = [];
+  int _currentPage = 1;
+  String _currentSearchStr = "";
+
   @override
   void initState() {
-    context.read<CharacterBloc>().add(const CharacterEvent.fetch(name: '', page: 1));
+    if (_currentResults.isEmpty) {
+      context.read<CharacterBloc>().add(const CharacterEvent.fetch(name: '', page: 1));
+    }
     super.initState();
   }
 
@@ -41,30 +50,57 @@ class _SearchPageState extends State<SearchPage> {
               hintStyle: const TextStyle(color: Colors.white),
             ),
             onChanged: (value) {
-              context.read<CharacterBloc>().add(CharacterEvent.fetch(name: value, page: 1));
+              _currentPage = 1;
+              _currentResults = [];
+              _currentSearchStr = value;
+              context
+                  .read<CharacterBloc>()
+                  .add(CharacterEvent.fetch(name: value, page: _currentPage));
             },
           ),
         ),
-        state.when(
-          loading: () {
-            return Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  CircularProgressIndicator(strokeWidth: 2),
-                  SizedBox(width: 10),
-                  Text('Loading...'),
-                ],
-              ),
-            );
-          },
-          loaded: (characterLoaded) => Text(
-            "${characterLoaded.info}",
-            style: TextStyle(fontSize: 20),
+        Expanded(
+          child: state.when(
+            loading: () => _loadingWidget(),
+            loaded: (characterLoaded) {
+              _currentCharacter = characterLoaded;
+              _currentResults = _currentCharacter.results;
+              return _currentResults.isNotEmpty
+                  ? _customListView(_currentResults)
+                  : const SizedBox();
+            },
+            error: () => const Text("Nothing found..."),
           ),
-          error: () => const Text("Nothing found..."),
         ),
       ],
+    );
+  }
+
+  Widget _loadingWidget() {
+    return Center(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          CircularProgressIndicator(strokeWidth: 2),
+          SizedBox(width: 10),
+          Text('Loading...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _customListView(List<Results> currentResults) {
+    return ListView.separated(
+      itemCount: _currentResults.length,
+      separatorBuilder: (_, index) => const SizedBox(height: 5),
+      shrinkWrap: true,
+      itemBuilder: (context, index) {
+        final result = currentResults[index];
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+          child: CustomListTile(result: result),
+        );
+      },
     );
   }
 }
