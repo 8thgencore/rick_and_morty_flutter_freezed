@@ -1,8 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:rick_and_morty_flutter_freezed/bloc_observable.dart';
 import 'package:rick_and_morty_flutter_freezed/ui/pages/home_page.dart';
 
-void main() {
-  runApp(const MyApp());
+// flutter pub run build_runner watch --delete-conflicting-outputs
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final storage = await HydratedStorage.build(
+    storageDirectory: await getTemporaryDirectory(),
+  );
+
+  HydratedBlocOverrides.runZoned(
+    () => runApp(const MyApp()),
+    blocObserver: CharacterBlocObservable(),
+    storage: storage,
+  );
+
+  // BlocOverrides.runZoned(
+  //   () => runApp(const MyApp()),
+  //   blocObserver: CharacterBlocObservable(),
+  // );
 }
 
 class MyApp extends StatelessWidget {
